@@ -517,7 +517,6 @@ module.exports = function(RED) {
         if (node != null) {
             try {
                 const response = await node.openai.askGPT(req.body.prompt)
-                console.log(response)
                 res.status(200).send(response.data);
             } catch (err) {
                 res.sendStatus(500);

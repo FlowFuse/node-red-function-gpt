@@ -626,7 +626,6 @@
                         // eslint-disable-next-line no-unused-vars
                         success: function (response) {
                             RED.notify("Success.", { type: "success" });
-                            console.log(response)
                             let content = response.choices[0].message.content
                             // strip content of extras
                             content = content.replace('```javascript', '').replace('```csharp', '').replace('```', '').replace('```', '')
@@ -634,8 +633,6 @@
                         },
                         // eslint-disable-next-line no-unused-vars
                         error: function (jqXHR, textStatus, errorThrown) {
-                            console.error(errorThrown)
-                            console.log(jqXHR.status == 404)
                             if (jqXHR.status == 404) {
                                 RED.notify("Please deploy the nodes first in order to use ChatGPT", "error");
                             } else if (jqXHR.status == 500) {
