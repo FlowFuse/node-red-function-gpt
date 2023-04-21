@@ -1,0 +1,61 @@
+<script type="text/javascript">
+    RED.nodes.registerType('chatgpt-config',{
+        category: 'config',
+        credentials: {
+            apikey: {type: "text"},
+            orgid: {type: "text"}
+        },
+        defaults: {
+            name: {
+                value: "GPT Config",
+                required: true
+            },
+            model: {
+                value: "gpt-3.5-turbo",
+                required: true,
+            }
+        },
+        label: function() {
+            return this.name || "ChatGPT Config";
+        }
+    });
+</script>
+
+<script type="text/html" data-template-name="chatgpt-config">
+    <div class="form-row">
+        <label for="node-config-input-name"><i class="fa fa-bookmark"></i> Name</label>
+        <input type="text" id="node-config-input-name">
+    </div>
+    <div class="form-row">
+        <label for="node-config-input-orgid"><i class="fa fa-bookmark"></i> Org ID</label>
+        <input type="text" id="node-config-input-orgid">
+    </div>
+    <div class="form-row">
+        <label for="node-config-input-apikey"><i class="fa fa-bookmark"></i> API Key</label>
+        <input type="text" id="node-config-input-apikey">
+    </div>
+    <div class="form-row">
+        <label for="node-config-input-model"><i class="fa fa-bookmark"></i> Model</label>
+        <input type="text" id="node-config-input-model">
+    </div>
+</script>
+
+<script type="text/html" data-help-name="chatgpt-config">
+    <p>Configure the input ChatGPT API.</p>
+    <h3>Properties</h3>
+    <dl class="message-properties">
+        <dt>Org ID <span class="property-type">string</span></dt>
+        <dd> You can retreive your OpenAI Org ID from
+            <a href="https://platform.openai.com/account/org-settings"
+            target="_blank">here.</a>
+        </dd>
+        <dt>API Key <span class="property-type">string</span></dt>
+        <dd> You can retreive your OpenAI API key from
+            <a href="https://platform.openai.com/account/api-keys"
+            target="_blank">here.</a>
+        </dd>
+        <dt>Model <span class="property-type">string</span></dt>
+        <dd> You can see a full list of available models <a href="
+            https://platform.openai.com/docs/models" target="_blank">here</a>.</dd>
+    </dl>
+</script>

@@ -1,0 +1,742 @@
+<script type="text/html" data-template-name="function-gpt">
+    <style>
+        .func-tabs-row {
+            margin-bottom: 0;
+        }
+        #node-input-libs-container-row .red-ui-editableList-container {
+            padding: 0px;
+        }
+        #node-input-libs-container-row .red-ui-editableList-container li {
+            padding:0px;
+        }
+        #node-input-libs-container-row .red-ui-editableList-item-remove {
+            right: 5px;
+        }
+
+        #node-input-libs-container-row .red-ui-editableList-header {
+            display: flex;
+            background: var(--red-ui-tertiary-background);
+            padding-right: 75px;
+            border-top-left-radius: 3px;
+            border-top-right-radius: 3px;
+        }
+        #node-input-libs-container-row .red-ui-editableList-header > div {
+            flex-grow: 1;
+        }
+
+        .node-libs-entry {
+            display: flex;
+        }
+
+        .node-libs-entry .red-ui-typedInput-container {
+            border-radius: 0;
+            border: none;
+        }
+        .node-libs-entry .red-ui-typedInput-type-select {
+            border-radius: 0 !important;
+            height: 34px;
+        }
+        .node-libs-entry > span > input[type=text] {
+            border-radius: 0;
+            border-top-color: var(--red-ui-form-background);
+            border-bottom-color: var(--red-ui-form-background);
+            border-right-color: var(--red-ui-form-background);
+        }
+        .node-libs-entry > span > input[type=text].input-error {
+        }
+        .node-libs-entry > span {
+            flex-grow: 1;
+            width: 50%;
+            position: relative;
+        }
+        .node-libs-entry span .node-input-libs-var, .node-libs-entry span .red-ui-typedInput-container {
+            width: 100%;
+        }
+        .node-libs-entry > span > span > i {
+            display: none;
+        }
+        .node-libs-entry > span > span.input-error > i {
+            display: inline;
+        }
+
+    </style>
+    <input type="hidden" id="node-input-func">
+    <input type="hidden" id="node-input-noerr">
+    <input type="hidden" id="node-input-finalize">
+    <input type="hidden" id="node-input-initialize">
+
+    <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> <span data-i18n="common.label.name">Name</span></label>
+        <div style="display: inline-block; width: calc(100% - 105px)"><input type="text" id="node-input-name" placeholder="Name" data-i18n="[placeholder]common.label.name"></div>
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-config"><i class="fa fa-tag"></i> <span>GPT Config</span></label>
+        <div style="display: inline-block; width: calc(100% - 200px)"><input type="text" id="node-input-config"></div>
+    </div>
+
+    <div class="form-row func-tabs-row">
+        <ul style="min-width: 600px; margin-bottom: 20px;" id="func-tabs"></ul>
+    </div>
+    <div id="func-tabs-content" style="min-height: calc(100% - 150px);">
+
+        <div id="func-tab-config" style="display:none">
+            <div class="form-row">
+                <label for="node-input-outputs"><i class="fa fa-random"></i> <span data-i18n="function-gpt.label.outputs">Outputs</span></label>
+                <input id="node-input-outputs" style="width: 60px;" value="1">
+            </div>
+
+            <div class="form-row node-input-libs-row hide" style="margin-bottom: 0px;">
+                <label><i class="fa fa-cubes"></i> <span data-i18n="function-gpt.label.modules">Modules</span></label>
+            </div>
+            <div class="form-row node-input-libs-row hide" id="node-input-libs-container-row">
+                <ol id="node-input-libs-container"></ol>
+            </div>
+        </div>
+
+        <div id="func-tab-init" style="display:none">
+            <div class="form-row node-text-editor-row" style="position:relative">
+                <div style="height: 250px; min-height:150px;" class="node-text-editor" id="node-input-init-editor" ></div>
+                <div style="position: absolute; right:0; bottom: calc(100% - 20px); z-Index: 10;"><button type="button" id="node-init-expand-js" class="red-ui-button red-ui-button-small"><i class="fa fa-expand"></i></button></div>
+            </div>
+        </div>
+
+        <div id="func-tab-body" style="display:none">
+            <div class="form-row node-text-editor-row" style="position:relative">
+                <div style="height: 220px; min-height:150px;" class="node-text-editor" id="node-input-func-editor" ></div>
+                <div style="position: absolute; right:0; bottom: calc(100% - 20px); z-Index: 10;"><button type="button" id="node-function-expand-js" class="red-ui-button red-ui-button-small"><i class="fa fa-expand"></i></button></div>
+            </div>
+        </div>
+
+        <div id="func-tab-finalize" style="display:none">
+            <div class="form-row node-text-editor-row" style="position:relative">
+                <div style="height: 250px; min-height:150px;" class="node-text-editor" id="node-input-finalize-editor" ></div>
+                <div style="position: absolute; right:0; bottom: calc(100% - 20px); z-Index: 10;"><button type="button" id="node-finalize-expand-js" class="red-ui-button red-ui-button-small"><i class="fa fa-expand"></i></button></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="func-tab-chatgpt" style="display: flex; gap: 6px;">
+        <input id="chatgpt-input" type="text" style="width:100%;"/>
+        <input id="chatgpt-ask" class="ui-button ui-widget ui-corner-all primary" type="button" value="Ask ChatGPT">
+        <i id="chatgpt-loading" class="fa fa-spinner fa-spin" style="font-size:20px; line-height: 34px; display:none"></i>
+    </div>
+</script>
+
+<script type="text/javascript">
+
+(function() {
+
+    var invalidModuleVNames = [
+        'console',
+        'util',
+        'Buffer',
+        'Date',
+        'RED',
+        'node',
+        '__node__',
+        'context',
+        'flow',
+        'global',
+        'env',
+        'setTimeout',
+        'clearTimeout',
+        'setInterval',
+        'clearInterval',
+        'promisify'
+    ]
+
+    var knownFunctionNodes = {};
+    RED.events.on("nodes:add", function(n) {
+        if (n.type === "function-gpt") {
+            knownFunctionNodes[n.id] = n;
+        }
+    })
+    RED.events.on("nodes:remove", function(n) {
+        if (n.type === "function-gpt") {
+            delete knownFunctionNodes[n.id];
+        }
+    })
+
+    var missingModules = [];
+    var missingModuleReasons = {};
+    RED.events.on("runtime-state", function(event) {
+        if (event.error === "missing-modules") {
+            missingModules = event.modules.map(function(m) { missingModuleReasons[m.module] = m.error; return m.module });
+            for (var id in knownFunctionNodes) {
+                if (knownFunctionNodes.hasOwnProperty(id) && knownFunctionNodes[id].libs && knownFunctionNodes[id].libs.length > 0) {
+                    RED.editor.validateNode(knownFunctionNodes[id])
+                }
+            }
+        } else if (!event.text) {
+            missingModuleReasons = {};
+            missingModules = [];
+            for (var id in knownFunctionNodes) {
+                if (knownFunctionNodes.hasOwnProperty(id) && knownFunctionNodes[id].libs && knownFunctionNodes[id].libs.length > 0) {
+                    RED.editor.validateNode(knownFunctionNodes[id])
+                }
+            }
+        }
+        RED.view.redraw();
+    });
+
+    var installAllowList = ['*'];
+    var installDenyList = [];
+
+    var modulesEnabled = true;
+    if (RED.settings.get('externalModules.modules.allowInstall', true) === false) {
+        modulesEnabled = false;
+    }
+    var settingsAllowList = RED.settings.get("externalModules.modules.allowList")
+    var settingsDenyList = RED.settings.get("externalModules.modules.denyList")
+    if (settingsAllowList || settingsDenyList) {
+        installAllowList = settingsAllowList;
+        installDenyList = settingsDenyList
+    }
+    installAllowList = RED.utils.parseModuleList(installAllowList);
+    installDenyList = RED.utils.parseModuleList(installDenyList);
+
+
+    // object that maps from library name to its descriptor
+    var allLibs = [];
+
+    function moduleName(module) {
+        var match = /^([^@]+)@(.+)/.exec(module);
+        if (match) {
+            return [match[1], match[2]];
+        }
+        return [module, undefined];
+    }
+
+    function getAllUsedModules() {
+        var moduleSet = new Set();
+        for (var id in knownFunctionNodes) {
+            if (knownFunctionNodes.hasOwnProperty(id)) {
+                if (knownFunctionNodes[id].libs) {
+                    for (var i=0, l=knownFunctionNodes[id].libs.length; i<l; i++) {
+                        if (RED.utils.checkModuleAllowed(knownFunctionNodes[id].libs[i].module,null,installAllowList,installDenyList)) {
+                            moduleSet.add(knownFunctionNodes[id].libs[i].module);
+                        }
+                    }
+                }
+            }
+        }
+        var modules = Array.from(moduleSet);
+        modules.sort();
+        return modules;
+    }
+
+    function prepareLibraryConfig(node) {
+        $(".node-input-libs-row").show();
+        var usedModules = getAllUsedModules();
+        var typedModules = usedModules.map(function(l) {
+            return {icon:"fa fa-cube", value:l,label:l,hasValue:false}
+        })
+        typedModules.push({
+            value:"_custom_", label:RED._("editor:subflow.licenseOther"), icon:"red/images/typedInput/az.svg"
+        })
+
+        var libList = $("#node-input-libs-container").css('min-height','100px').css('min-width','450px').editableList({
+            header: $('<div><div data-i18n="node-red:function-gpt.require.moduleName">Module Name</div><div data-i18n="node-red:function-gpt.require.importAs">Import As</div></div>'),
+            addItem: function(container,i,opt) {
+                var parent = container.parent();
+                var row0 = $("<div/>").addClass("node-libs-entry").appendTo(container);
+                var fmoduleSpan = $("<span>").appendTo(row0);
+                var fmodule = $("<input/>", {
+                    class: "node-input-libs-val",
+                    placeholder: "module", // RED._("node-red:function-gpt.require.module"),
+                    type: "text"
+                }).css({
+                }).appendTo(fmoduleSpan).typedInput({
+                    types: typedModules,
+                    default: usedModules.indexOf(opt.module) > -1 ? opt.module : "_custom_"
+                });
+                if (usedModules.indexOf(opt.module) === -1) {
+                    fmodule.typedInput('value', opt.module);
+                }
+                var moduleWarning = $('<span style="position: absolute;right:2px;top:7px; display:inline-block; width: 16px;"><i class="fa fa-warning"></i></span>').appendTo(fmoduleSpan);
+                RED.popover.tooltip(moduleWarning.find("i"),function() {
+                    var val = fmodule.typedInput("type");
+                    if (val === "_custom_") {
+                        val = fmodule.val();
+                    }
+                    var errors = [];
+
+                    if (!RED.utils.checkModuleAllowed(val,null,installAllowList,installDenyList)) {
+                        // return RED._("node-red:function-gpt.error.moduleNotAllowed",{module:val});
+                        return `Module ${val} not allowed`;
+                    } else {
+                        // return RED._("node-red:function-gpt.error.moduleLoadError",{module:val,error:missingModuleReasons[val]});
+                        return `Failed to load module ${val}: ${missingModuleReasons[val]}`
+                    }
+                })
+
+                var fvarSpan = $("<span>").appendTo(row0);
+
+                var fvar = $("<input/>", {
+                    class: "node-input-libs-var red-ui-font-code",
+                    placeholder: "variable", // RED._("node-red:function-gpt.require.var"),
+                    type: "text"
+                }).css({
+                }).appendTo(fvarSpan).val(opt.var);
+                var vnameWarning = $('<span style="position: absolute; right:2px;top:7px;display:inline-block; width: 16px;"><i class="fa fa-warning"></i></span>').appendTo(fvarSpan);
+                RED.popover.tooltip(vnameWarning.find("i"),function() {
+                    var val = fvar.val();
+                    if (invalidModuleVNames.indexOf(val) !== -1) {
+                        // return RED._("node-red:function-gpt.error.moduleNameReserved",{name:val})
+                        return `Reserved variable name: ${val}`
+                    } else {
+                        // return RED._("node-red:function-gpt.error.moduleNameError",{name:val})
+                        return `Invalid module variable name: ${val}`
+                    }
+                })
+
+
+
+                fvar.on("change keyup paste", function (e) {
+                    var v = $(this).val().trim();
+                    if (v === "" || / /.test(v) || invalidModuleVNames.indexOf(v) !== -1) {
+                        fvar.addClass("input-error");
+                        vnameWarning.addClass("input-error");
+                    } else {
+                        fvar.removeClass("input-error");
+                        vnameWarning.removeClass("input-error");
+                    }
+                });
+
+                fmodule.on("change keyup paste", function (e) {
+                    var val = $(this).typedInput("type");
+                    if (val === "_custom_") {
+                        val = $(this).val();
+                    }
+                    var varName = val.trim().replace(/^@/,"").replace(/@.*$/,"").replace(/[-_/\.].?/g, function(v) { return v[1]?v[1].toUpperCase():"" });
+                    fvar.val(varName);
+                    fvar.trigger("change");
+
+                    if (RED.utils.checkModuleAllowed(val,null,installAllowList,installDenyList) && (missingModules.indexOf(val) === -1)) {
+                        fmodule.removeClass("input-error");
+                        moduleWarning.removeClass("input-error");
+                    } else {
+                        fmodule.addClass("input-error");
+                        moduleWarning.addClass("input-error");
+                    }
+                });
+                if (RED.utils.checkModuleAllowed(opt.module,null,installAllowList,installDenyList) && (missingModules.indexOf(opt.module) === -1)) {
+                    fmodule.removeClass("input-error");
+                    moduleWarning.removeClass("input-error");
+                } else {
+                    fmodule.addClass("input-error");
+                    moduleWarning.addClass("input-error");
+                }
+                if (opt.var) {
+                    fvar.trigger("change");
+                }
+            },
+            removable: true
+        });
+
+        var libs = node.libs || [];
+        for (var i=0,l=libs.length;i<l; i++) {
+            libList.editableList('addItem',libs[i])
+        }
+
+    }
+
+    function getLibsList() {
+        var _libs = [];
+        if (RED.settings.functionExternalModules !== false) {
+            var libs = $("#node-input-libs-container").editableList("items");
+            libs.each(function(i) {
+                var item = $(this);
+                var v = item.find(".node-input-libs-var").val();
+                var n = item.find(".node-input-libs-val").typedInput("type");
+                if (n === "_custom_") {
+                    n = item.find(".node-input-libs-val").val();
+                }
+                if ((!v || (v === "")) ||
+                    (!n || (n === ""))) {
+                    return;
+                }
+                _libs.push({
+                    var: v,
+                    module: n
+                });
+            });
+        }
+        return _libs;
+    }
+
+    RED.nodes.registerType('function-gpt',{
+        color:"#fdd0a2",
+        category: 'function',
+        defaults: {
+            name: {value:"_DEFAULT_"},
+            config: {value: "", type: "chatgpt-config"},
+            func: {value:"\nreturn msg;"},
+            outputs: {value:1},
+            noerr: {value:0,required:true,
+                    validate: function(v, opt) {
+                        if (!v) {
+                            return true;
+                        }
+                        // return RED._("node-red:function-gpt.error.invalid-js");
+                        return `Error in JavaScript code`;
+                    }},
+            initialize: {value:""},
+            finalize: {value:""},
+            libs: {value: [], validate: function(v, opt) {
+                if (!v) { return true; }
+                for (var i=0,l=v.length;i<l;i++) {
+                    var m = v[i];
+                    if (!RED.utils.checkModuleAllowed(m.module,null,installAllowList,installDenyList)) {
+                        // return RED._("node-red:function-gpt.error.moduleNotAllowed", { module: m.module });
+                        return `Module ${m.module} not allowed`
+                    }
+                    if (m.var === "" || / /.test(m.var)) {
+                        // return RED._("node-red:function-gpt.error.moduleNameError", { name: m.var });
+                        return `Invalid module variable name: ${m.var}`;
+                    }
+                    if (missingModules.indexOf(m.module) > -1) {
+                        // return RED._("node-red:function-gpt.error.missing-module", { module: m.module });
+                        return `Module ${m.module} missing`
+                    }
+                    if (invalidModuleVNames.indexOf(m.var) !== -1){
+                        // return RED._("node-red:function-gpt.error.moduleNameError", { name: m.var });
+                        return `Invalid module variable name: ${m.var}`
+                    }
+                }
+                return true;
+            }}
+        },
+        inputs:1,
+        outputs:1,
+        icon: "chatgpt.svg",
+        label: function() {
+            return this.name || "function-gpt";
+        },
+        labelStyle: function() {
+            return this.name?"node_label_italic":"";
+        },
+        oneditprepare: function() {
+            var that = this;
+
+            var tabs = RED.tabs.create({
+                id: "func-tabs",
+                onchange: function(tab) {
+
+                    $("#func-tabs-content").children().hide();
+                    $("#" + tab.id).show();
+                    
+                    if (tab.id === "func-tab-config") {
+                        $("#func-tab-chatgpt").hide()
+                    } else {
+                        $("#func-tab-chatgpt").show()
+                    }
+
+                    let editor = $("#" + tab.id).find('.monaco-editor').first();
+                    if(editor.length) {
+                        if(that.editor.nodered && that.editor.type == "monaco") {
+                            that.editor.nodered.refreshModuleLibs(getLibsList());
+                        }
+                        RED.tray.resize();
+                        //auto focus editor on tab switch
+                        if (that.initEditor.getDomNode() == editor[0]) {
+                            that.initEditor.focus();
+                        } else if (that.editor.getDomNode() == editor[0]) {
+                            that.editor.focus();
+                        } else if (that.finalizeEditor.getDomNode() == editor[0]) {
+                            that.finalizeEditor.focus();
+                        }
+                    }
+                }
+            });
+            tabs.addTab({
+                id: "func-tab-config",
+                iconClass: "fa fa-cog",
+                label: "Setup" // that._("function-gpt.label.setup")
+            });
+
+            tabs.addTab({
+                id: "func-tab-init",
+                label: "On Start" // that._("function-gpt.label.initialize")
+            });
+            tabs.addTab({
+                id: "func-tab-body",
+                label: "On Message" // that._("function-gpt.label.function")
+            });
+            tabs.addTab({
+                id: "func-tab-finalize",
+                label: "On Stop" // that._("function-gpt.label.finalize")
+            });
+
+            tabs.activateTab("func-tab-body");
+
+            $( "#node-input-outputs" ).spinner({
+                min: 0,
+                max: 500,
+                change: function(event, ui) {
+                    var value = parseInt(this.value);
+                    value = isNaN(value) ? 1 : value;
+                    value = Math.max(value, parseInt($(this).attr("aria-valuemin")));
+                    value = Math.min(value, parseInt($(this).attr("aria-valuemax")));
+                    if (value !== this.value) { $(this).spinner("value", value); }
+                }
+            });
+
+            var buildEditor = function(id, stateId, focus, value, defaultValue, extraLibs, offset) {
+                var editor = RED.editor.createEditor({
+                    id: id,
+                    mode: 'ace/mode/nrjavascript',
+                    value: value || defaultValue || "",
+                    stateId: stateId,
+                    focus: true,
+                    globals: {
+                        msg:true,
+                        context:true,
+                        RED: true,
+                        util: true,
+                        flow: true,
+                        global: true,
+                        console: true,
+                        Buffer: true,
+                        setTimeout: true,
+                        clearTimeout: true,
+                        setInterval: true,
+                        clearInterval: true
+                    },
+                    extraLibs: extraLibs
+                });
+                if (defaultValue && value === "") {
+                    editor.moveCursorTo(defaultValue.split("\n").length +offset, 0);
+                }
+                editor.__stateId = stateId;
+                return editor;
+            }
+            // this.initEditor = buildEditor('node-input-init-editor', this.id + "/" + "initEditor", false, $("#node-input-initialize").val(), RED._("node-red:function-gpt.text.initialize"), undefined, 0);
+            this.initEditor = buildEditor('node-input-init-editor', this.id + "/" + "initEditor", false, $("#node-input-initialize").val(), "// Code added here will be run once\n// whenever the node is started.\n", undefined, 0);
+            this.editor = buildEditor('node-input-func-editor', this.id + "/" + "editor", true, $("#node-input-func").val(), undefined, that.libs || [], undefined, -1);
+            // this.finalizeEditor = buildEditor('node-input-finalize-editor', this.id + "/" + "finalizeEditor", false, $("#node-input-finalize").val(), RED._("node-red:function-gpt.text.finalize"), undefined, 0);
+            this.finalizeEditor = buildEditor('node-input-finalize-editor', this.id + "/" + "finalizeEditor", false, $("#node-input-finalize").val(), "// Code added here will be run when the\n// node is being stopped or re-deployed.\n", undefined, 0);
+
+            RED.library.create({
+                url:"functions", // where to get the data from
+                type:"function", // the type of object the library is for
+                editor:this.editor, // the field name the main text body goes to
+                mode:"ace/mode/nrjavascript",
+                fields:[
+                    'name', 'outputs',
+                    {
+                        name: 'initialize',
+                        get: function() {
+                            return that.initEditor.getValue();
+                        },
+                        set: function(v) {
+                            that.initEditor.setValue(v||"// Code added here will be run once\n// whenever the node is started.\n", -1);
+                        }
+                    },
+                    {
+                        name: 'finalize',
+                        get: function() {
+                            return that.finalizeEditor.getValue();
+                        },
+                        set: function(v) {
+                            that.finalizeEditor.setValue(v||"// Code added here will be run when the\n// node is being stopped or re-deployed.\n", -1);
+                        }
+                    },
+                    {
+                        name: 'info',
+                        get: function() {
+                            return that.infoEditor.getValue();
+                        },
+                        set: function(v) {
+                            that.infoEditor.setValue(v||"", -1);
+                        }
+                    }
+                ],
+                ext:"js"
+            });
+
+            var expandButtonClickHandler = function(editor) {
+                return function (e) {
+                    e.preventDefault();
+                    var value = editor.getValue();
+                    editor.saveView(`inside function-expandButtonClickHandler ${editor.__stateId}`);
+                    var extraLibs = that.libs || [];
+                    RED.editor.editJavaScript({
+                        value: value,
+                        width: "Infinity",
+                        stateId: editor.__stateId,
+                        mode: "ace/mode/nrjavascript",
+                        focus: true,
+                        cancel: function () {
+                            setTimeout(function () {
+                                editor.focus();
+                            }, 250);
+                        },
+                        complete: function (v, cursor) {
+                            editor.setValue(v, -1);
+                            setTimeout(function () {
+                                editor.restoreView();
+                                editor.focus();
+                            }, 250);
+                        },
+                        extraLibs: extraLibs
+                    });
+                }
+            }
+            $("#node-init-expand-js").on("click", expandButtonClickHandler(this.initEditor));
+            $("#node-function-expand-js").on("click", expandButtonClickHandler(this.editor));
+            $("#node-finalize-expand-js").on("click", expandButtonClickHandler(this.finalizeEditor));
+
+            RED.popover.tooltip($("#node-init-expand-js"), RED._("node-red:common.label.expand"));
+            RED.popover.tooltip($("#node-function-expand-js"), RED._("node-red:common.label.expand"));
+            RED.popover.tooltip($("#node-finalize-expand-js"), RED._("node-red:common.label.expand"));
+
+            /*
+                Ask ChatGPT Logic
+            */
+            $("#chatgpt-ask").on("click", () => {
+                const query = $("#chatgpt-input").val()
+
+                const editorTabId = $('.func-tabs-row .red-ui-tabs .red-ui-tab.active')[0].id
+                
+                var editor
+                switch (editorTabId) {
+                    case "red-ui-tab-func-tab-init":
+                        editor = that.initEditor
+                        break;
+                    case "red-ui-tab-func-tab-body":
+                        editor = that.editor
+                        break;
+                    case "red-ui-tab-func-tab-finalize":
+                        editor = that.finalizeEditor
+                        break;
+                }
+
+                if (editor) {
+                    $("#chatgpt-ask").hide()
+                    $("#chatgpt-loading").show()
+
+                    $.ajax({
+                        url: "/function-gpt-ask/" + that.id,
+                        type: "POST",
+                        data: {
+                            prompt: query
+                        },
+                        // eslint-disable-next-line no-unused-vars
+                        success: function (response) {
+                            RED.notify("Success.", { type: "success" });
+                            console.log(response)
+                            let content = response.choices[0].message.content
+                            // strip content of extras
+                            content = content.replace('```javascript', '').replace('```csharp', '').replace('```', '').replace('```', '')
+                            editor.setValue(content)
+                        },
+                        // eslint-disable-next-line no-unused-vars
+                        error: function (jqXHR, textStatus, errorThrown) {
+                            console.error(errorThrown)
+                            console.log(jqXHR.status == 404)
+                            if (jqXHR.status == 404) {
+                                RED.notify("Please deploy the nodes first in order to use ChatGPT", "error");
+                            } else if (jqXHR.status == 500) {
+                                RED.notify("Please ensure you have configured ChatGPT for this function-gpt node, and re-deployed.", "error");
+                            } else if (jqXHR.status == 0) {
+                                RED.notify(that._("common.notification.error", { message: that._("common.notification.errors.no-response") }), "error");
+                            } else {
+                                RED.notify(that._("common.notification.error", { message: that._("common.notification.errors.unexpected", { status: jqXHR.status, message: textStatus }) }), "error");
+                            }
+                        },
+                        complete: function () {
+                            $("#chatgpt-loading").hide()
+                            $("#chatgpt-ask").show()
+                        }
+                    });
+                }
+            })
+
+            if (RED.settings.functionExternalModules !== false) {
+                prepareLibraryConfig(that);
+            }
+        },
+        oneditsave: function() {
+            var node = this;
+            var noerr = 0;
+            $("#node-input-noerr").val(0);
+
+            var disposeEditor = function(editorName,targetName,defaultValue) {
+                var editor = node[editorName];
+                var annot = editor.getSession().getAnnotations();
+                for (var k=0; k < annot.length; k++) {
+                    if (annot[k].type === "error") {
+                        noerr += annot.length;
+                        break;
+                    }
+                }
+                var val = editor.getValue();
+                if (defaultValue) {
+                    if (val.trim() == defaultValue.trim()) {
+                        val = "";
+                    }
+                }
+                editor.destroy();
+                delete node[editorName];
+                $("#"+targetName).val(val);
+            }
+            disposeEditor("editor","node-input-func");
+            disposeEditor("initEditor","node-input-initialize", "// Code added here will be run once\n// whenever the node is started.\n");
+            disposeEditor("finalizeEditor","node-input-finalize", "// Code added here will be run when the\n// node is being stopped or re-deployed.\n");
+
+            $("#node-input-noerr").val(noerr);
+            this.noerr = noerr;
+            node.libs = getLibsList();
+        },
+        oneditcancel: function() {
+            var node = this;
+
+            node.editor.destroy();
+            delete node.editor;
+
+            node.initEditor.destroy();
+            delete node.initEditor;
+
+            node.finalizeEditor.destroy();
+            delete node.finalizeEditor;
+        },
+        oneditresize: function(size) {
+            const rowheight = 180
+            var rows = $("#dialog-form>div:not(.node-text-editor-row)");
+            var height = $("#dialog-form").height();
+            for (var i=0; i<rows.length; i++) {
+                height -= $(rows[i]).outerHeight(true);
+            }
+            var editorRow = $("#dialog-form>div.node-text-editor-row");
+            height -= (parseInt(editorRow.css("marginTop"))+parseInt(editorRow.css("marginBottom")));
+            $("#dialog-form .node-text-editor").css("height",height+"px");
+
+            var height = size.height;
+            $("#node-input-init-editor").css("height", (height - rowheight)+"px");
+            $("#node-input-func-editor").css("height", (height - rowheight)+"px");
+            $("#node-input-finalize-editor").css("height", (height - rowheight)+"px");
+
+            this.initEditor.resize();
+            this.editor.resize();
+            this.finalizeEditor.resize();
+
+            $("#node-input-libs-container").css("height", (height - 250)+"px");
+        },
+        onadd: function() {
+            if (this.name === '_DEFAULT_') {
+                this.name = ''
+                RED.actions.invoke("core:generate-node-names", this, {generateHistory: false})
+            }
+        }
+    });
+})();
+</script>
+
+<script type="text/html" data-help-name="function-gpt">
+    <p>An extension of the standard Node-RED function node which includes additional prompt input for ChatGPT to generate code.</p>
+    <p>Note: You do need a valid OpenAI API key and account in order to use this node, configured via the <code>GPT Config</code> option</p>
+    <p>The ChatGPT prompt will populate the response from the API into the full contents of the active tab - "On Message", "On Start" or "On Stop".</p>
+    <p>Please see the documentation for the standard Function node if you wish to understand the details of the Function node.</p>
+</script>

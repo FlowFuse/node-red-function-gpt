@@ -1,0 +1,28 @@
+{
+  "name": "@flowforge/node-red-function-gpt",
+  "version": "0.1.0",
+  "description": "Variation of the ",
+  "author": {
+    "name": "Joe Pavitt",
+    "url": "https://github.com/joepavitt"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joepavitt/node-red-contrib-posthog.git"
+  },
+  "license": "Apache-2.0",
+  "keywords": [
+    "node-red"
+  ],
+  "node-red": {
+    "nodes": {
+      "function-gpt": "./index.js",
+      "chatgpt-config": "./config/index.js"
+    }
+  },
+  "dependencies": {
+    "acorn": "^8.8.2",
+    "acorn-walk": "^8.2.0",
+    "openai": "^3.2.1"
+  }
+}
