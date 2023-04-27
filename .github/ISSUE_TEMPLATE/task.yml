@@ -1,0 +1,12 @@
+name: 📄 Task
+description: Create a task
+labels: [task]
+body:
+- type: markdown
+  attributes:
+    value: |
+      A task is a discrete piece of work that needs doing, that isn't a feature request
+- type: textarea
+  attributes:
+    label: Description
+    description: Describe the task
