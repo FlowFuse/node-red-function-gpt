@@ -497,7 +497,7 @@ module.exports = function(RED) {
     RED.nodes.registerType("function-gpt", FunctionGPTNode, {
         dynamicModuleList: "libs",
         settings: {
-            functionExternalModules: { value: true, exportable: true }
+            functionGptExternalModules: { value: true, exportable: true }
         }
     });
 
