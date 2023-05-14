@@ -42,8 +42,6 @@
             border-bottom-color: var(--red-ui-form-background);
             border-right-color: var(--red-ui-form-background);
         }
-        .node-libs-entry > span > input[type=text].input-error {
-        }
         .node-libs-entry > span {
             flex-grow: 1;
             width: 50%;
@@ -78,7 +76,7 @@
     <div class="form-row func-tabs-row">
         <ul style="min-width: 600px; margin-bottom: 20px;" id="func-tabs"></ul>
     </div>
-    <div id="func-tabs-content" style="min-height: calc(100% - 150px);">
+    <div id="func-tabs-content" style="min-height: calc(100% - 165px);">
 
         <div id="func-tab-config" style="display:none">
             <div class="form-row">
@@ -117,9 +115,12 @@
     </div>
 
     <div id="func-tab-chatgpt" style="display: flex; gap: 6px;">
-        <input id="chatgpt-input" type="text" style="width:100%;"/>
-        <input id="chatgpt-ask" class="ui-button ui-widget ui-corner-all primary" type="button" value="Ask ChatGPT">
+        <input id="chatgpt-input" type="search" style="width:100%;" disabled/>
+        <input id="chatgpt-ask" class="ui-button ui-widget ui-corner-all primary" type="button" value="Ask ChatGPT" disabled>
         <i id="chatgpt-loading" class="fa fa-spinner fa-spin" style="font-size:20px; line-height: 34px; display:none"></i>
+        <button id="chatgpt-cancel" class="ui-button ui-widget ui-corner-all primary" style="font-size:20px; display: none;">
+            <i class="fa fa-times"></i>
+        </button>
     </div>
 </script>
 
@@ -244,7 +245,7 @@
                 var fmoduleSpan = $("<span>").appendTo(row0);
                 var fmodule = $("<input/>", {
                     class: "node-input-libs-val",
-                    placeholder: "module", // RED._("node-red:function-gpt.require.module"),
+                    placeholder: RED._("node-red:function.require.module"),
                     type: "text"
                 }).css({
                 }).appendTo(fmoduleSpan).typedInput({
@@ -263,11 +264,9 @@
                     var errors = [];
 
                     if (!RED.utils.checkModuleAllowed(val,null,installAllowList,installDenyList)) {
-                        // return RED._("node-red:function-gpt.error.moduleNotAllowed",{module:val});
-                        return `Module ${val} not allowed`;
+                        return RED._("node-red:function.error.moduleNotAllowed",{module:val});
                     } else {
-                        // return RED._("node-red:function-gpt.error.moduleLoadError",{module:val,error:missingModuleReasons[val]});
-                        return `Failed to load module ${val}: ${missingModuleReasons[val]}`
+                        return RED._("node-red:function.error.moduleLoadError",{module:val,error:missingModuleReasons[val]});
                     }
                 })
 
@@ -275,7 +274,7 @@
 
                 var fvar = $("<input/>", {
                     class: "node-input-libs-var red-ui-font-code",
-                    placeholder: "variable", // RED._("node-red:function-gpt.require.var"),
+                    placeholder: RED._("node-red:function.require.var"),
                     type: "text"
                 }).css({
                 }).appendTo(fvarSpan).val(opt.var);
@@ -283,11 +282,9 @@
                 RED.popover.tooltip(vnameWarning.find("i"),function() {
                     var val = fvar.val();
                     if (invalidModuleVNames.indexOf(val) !== -1) {
-                        // return RED._("node-red:function-gpt.error.moduleNameReserved",{name:val})
-                        return `Reserved variable name: ${val}`
+                        return RED._("node-red:function.error.moduleNameReserved",{name:val})
                     } else {
-                        // return RED._("node-red:function-gpt.error.moduleNameError",{name:val})
-                        return `Invalid module variable name: ${val}`
+                        return RED._("node-red:function.error.moduleNameError",{name:val})
                     }
                 })
 
@@ -379,8 +376,7 @@
                         if (!v) {
                             return true;
                         }
-                        // return RED._("node-red:function-gpt.error.invalid-js");
-                        return `Error in JavaScript code`;
+                        return RED._("node-red:function.error.invalid-js");
                     }},
             initialize: {value:""},
             finalize: {value:""},
@@ -389,20 +385,20 @@
                 for (var i=0,l=v.length;i<l;i++) {
                     var m = v[i];
                     if (!RED.utils.checkModuleAllowed(m.module,null,installAllowList,installDenyList)) {
-                        // return RED._("node-red:function-gpt.error.moduleNotAllowed", { module: m.module });
-                        return `Module ${m.module} not allowed`
+                        return RED._("node-red:function.error.moduleNotAllowed", { module: m.module });
+                        // return `Module ${m.module} not allowed`
                     }
                     if (m.var === "" || / /.test(m.var)) {
-                        // return RED._("node-red:function-gpt.error.moduleNameError", { name: m.var });
-                        return `Invalid module variable name: ${m.var}`;
+                        return RED._("node-red:function.error.moduleNameError", { name: m.var });
+                        // return `Invalid module variable name: ${m.var}`;
                     }
                     if (missingModules.indexOf(m.module) > -1) {
-                        // return RED._("node-red:function-gpt.error.missing-module", { module: m.module });
-                        return `Module ${m.module} missing`
+                        return RED._("node-red:function.error.missing-module", { module: m.module });
+                        // return `Module ${m.module} missing`
                     }
                     if (invalidModuleVNames.indexOf(m.var) !== -1){
-                        // return RED._("node-red:function-gpt.error.moduleNameError", { name: m.var });
-                        return `Invalid module variable name: ${m.var}`
+                        return RED._("node-red:function.error.moduleNameError", { name: m.var });
+                        // return `Invalid module variable name: ${m.var}`
                     }
                 }
                 return true;
@@ -418,12 +414,39 @@
             return this.name?"node_label_italic":"";
         },
         oneditprepare: function() {
-            var that = this;
+            var node = this;
 
+            //restore last prompt from local storage
+            function restorePrompt() {
+                const ed = getCurrentEditor()
+                if (ed && ed.__stateId) {
+                    const key = ed.__stateId + "-gpt-prompt"
+                    const prompt = localStorage.getItem(key) || ""
+                    $("#chatgpt-input").val(prompt)
+                }
+            }
+            function storePrompt() {
+                const ed = getCurrentEditor()
+                if (ed && ed.__stateId) {
+                    const key = ed.__stateId + "-gpt-prompt"
+                    const prompt = $("#chatgpt-input").val() || ""
+                    localStorage.setItem(key, prompt)
+                }
+            }
+            function getCurrentEditor() {
+                const editorTabId = $('.func-tabs-row .red-ui-tabs .red-ui-tab.active')[0].id
+                switch (editorTabId) {
+                    case "red-ui-tab-func-tab-init":
+                        return node.initEditor
+                    case "red-ui-tab-func-tab-body":
+                        return node.editor
+                    case "red-ui-tab-func-tab-finalize":
+                        return node.finalizeEditor
+                }
+            }
             var tabs = RED.tabs.create({
                 id: "func-tabs",
                 onchange: function(tab) {
-
                     $("#func-tabs-content").children().hide();
                     $("#" + tab.id).show();
                     
@@ -435,38 +458,39 @@
 
                     let editor = $("#" + tab.id).find('.monaco-editor').first();
                     if(editor.length) {
-                        if(that.editor.nodered && that.editor.type == "monaco") {
-                            that.editor.nodered.refreshModuleLibs(getLibsList());
+                        if(node.editor.nodered && node.editor.type == "monaco") {
+                            node.editor.nodered.refreshModuleLibs(getLibsList());
                         }
                         RED.tray.resize();
                         //auto focus editor on tab switch
-                        if (that.initEditor.getDomNode() == editor[0]) {
-                            that.initEditor.focus();
-                        } else if (that.editor.getDomNode() == editor[0]) {
-                            that.editor.focus();
-                        } else if (that.finalizeEditor.getDomNode() == editor[0]) {
-                            that.finalizeEditor.focus();
+                        if (node.initEditor.getDomNode() == editor[0]) {
+                            node.initEditor.focus();
+                        } else if (node.editor.getDomNode() == editor[0]) {
+                            node.editor.focus();
+                        } else if (node.finalizeEditor.getDomNode() == editor[0]) {
+                            node.finalizeEditor.focus();
                         }
+                        restorePrompt()
                     }
                 }
             });
             tabs.addTab({
                 id: "func-tab-config",
                 iconClass: "fa fa-cog",
-                label: "Setup" // that._("function-gpt.label.setup")
+                label: node._("node-red:function.label.setup")
             });
 
             tabs.addTab({
                 id: "func-tab-init",
-                label: "On Start" // that._("function-gpt.label.initialize")
+                label: node._("node-red:function.label.initialize")
             });
             tabs.addTab({
                 id: "func-tab-body",
-                label: "On Message" // that._("function-gpt.label.function")
+                label: node._("node-red:function.label.function")
             });
             tabs.addTab({
                 id: "func-tab-finalize",
-                label: "On Stop" // that._("function-gpt.label.finalize")
+                label: node._("node-red:function.label.finalize")
             });
 
             tabs.activateTab("func-tab-body");
@@ -512,11 +536,9 @@
                 editor.__stateId = stateId;
                 return editor;
             }
-            // this.initEditor = buildEditor('node-input-init-editor', this.id + "/" + "initEditor", false, $("#node-input-initialize").val(), RED._("node-red:function-gpt.text.initialize"), undefined, 0);
-            this.initEditor = buildEditor('node-input-init-editor', this.id + "/" + "initEditor", false, $("#node-input-initialize").val(), "// Code added here will be run once\n// whenever the node is started.\n", undefined, 0);
-            this.editor = buildEditor('node-input-func-editor', this.id + "/" + "editor", true, $("#node-input-func").val(), undefined, that.libs || [], undefined, -1);
-            // this.finalizeEditor = buildEditor('node-input-finalize-editor', this.id + "/" + "finalizeEditor", false, $("#node-input-finalize").val(), RED._("node-red:function-gpt.text.finalize"), undefined, 0);
-            this.finalizeEditor = buildEditor('node-input-finalize-editor', this.id + "/" + "finalizeEditor", false, $("#node-input-finalize").val(), "// Code added here will be run when the\n// node is being stopped or re-deployed.\n", undefined, 0);
+            this.initEditor = buildEditor('node-input-init-editor', this.id + "/" + "initEditor", false, $("#node-input-initialize").val(), RED._("node-red:function.text.initialize"), undefined, 0);
+            this.editor = buildEditor('node-input-func-editor', this.id + "/" + "editor", true, $("#node-input-func").val(), undefined, node.libs || [], undefined, -1);
+            this.finalizeEditor = buildEditor('node-input-finalize-editor', this.id + "/" + "finalizeEditor", false, $("#node-input-finalize").val(), RED._("node-red:function.text.finalize"), undefined, 0);
 
             RED.library.create({
                 url:"functions", // where to get the data from
@@ -528,28 +550,28 @@
                     {
                         name: 'initialize',
                         get: function() {
-                            return that.initEditor.getValue();
+                            return node.initEditor.getValue();
                         },
                         set: function(v) {
-                            that.initEditor.setValue(v||"// Code added here will be run once\n// whenever the node is started.\n", -1);
+                            node.initEditor.setValue(v||"// Code added here will be run once\n// whenever the node is started.\n", -1);
                         }
                     },
                     {
                         name: 'finalize',
                         get: function() {
-                            return that.finalizeEditor.getValue();
+                            return node.finalizeEditor.getValue();
                         },
                         set: function(v) {
-                            that.finalizeEditor.setValue(v||"// Code added here will be run when the\n// node is being stopped or re-deployed.\n", -1);
+                            node.finalizeEditor.setValue(v||"// Code added here will be run when the\n// node is being stopped or re-deployed.\n", -1);
                         }
                     },
                     {
                         name: 'info',
                         get: function() {
-                            return that.infoEditor.getValue();
+                            return node.infoEditor.getValue();
                         },
                         set: function(v) {
-                            that.infoEditor.setValue(v||"", -1);
+                            node.infoEditor.setValue(v||"", -1);
                         }
                     }
                 ],
@@ -561,7 +583,7 @@
                     e.preventDefault();
                     var value = editor.getValue();
                     editor.saveView(`inside function-expandButtonClickHandler ${editor.__stateId}`);
-                    var extraLibs = that.libs || [];
+                    var extraLibs = node.libs || [];
                     RED.editor.editJavaScript({
                         value: value,
                         width: "Infinity",
@@ -592,68 +614,253 @@
             RED.popover.tooltip($("#node-function-expand-js"), RED._("node-red:common.label.expand"));
             RED.popover.tooltip($("#node-finalize-expand-js"), RED._("node-red:common.label.expand"));
 
-            /*
-                Ask ChatGPT Logic
-            */
-            $("#chatgpt-ask").on("click", () => {
-                const query = $("#chatgpt-input").val()
-
-                const editorTabId = $('.func-tabs-row .red-ui-tabs .red-ui-tab.active')[0].id
-                
-                var editor
-                switch (editorTabId) {
-                    case "red-ui-tab-func-tab-init":
-                        editor = that.initEditor
-                        break;
-                    case "red-ui-tab-func-tab-body":
-                        editor = that.editor
-                        break;
-                    case "red-ui-tab-func-tab-finalize":
-                        editor = that.finalizeEditor
-                        break;
+            /* Ask ChatGPT Logic */
+            let currentXhr = null
+            function updateUIStateGPT(state, editor) {
+                editor = editor || getCurrentEditor()
+                if (state === "ready") {
+                    $("#chatgpt-ask").prop("disabled", false)
                 }
-
-                if (editor) {
+                if (state === "loading") {
                     $("#chatgpt-ask").hide()
                     $("#chatgpt-loading").show()
+                    $("#chatgpt-cancel").show()
+                    $("#chatgpt-input").prop("disabled", true)
+                    if (editor) {
+                        editor.setReadOnly(true)
+                    }
+                } else {
+                    $("#chatgpt-ask").show()
+                    $("#chatgpt-loading").hide()
+                    $("#chatgpt-cancel").hide()
+                    $("#chatgpt-input").prop("disabled", false)
+                    if (editor) {
+                        editor.setReadOnly(false)
+                    }
+                }
+            }
 
-                    $.ajax({
-                        url: "/function-gpt-ask/" + that.id,
+            /**
+             * Asks the ChatGPT API for a response to a prompt.
+             * 
+             * @param {Object} editor The editor instance to use.
+             * @param {string} prompt The prompt to send to the ChatGPT API.
+             * @param {Object} codeLensRange The range of the code lens that was clicked.
+             * @param {boolean} replaceAll If true, all code in the editor will be replaced. If false, the 1st selection in the editor will be replaced - OR - if there is no selection, the code will be placed below the code lens.
+             * @param {boolean} returnMsg If false, ChatGPT API will be be asked to exclude `return msg` from the response.
+             */
+            function askGPT (editor, prompt, codeLensRange, replaceAll, returnMsg) {
+                returnMsg = (returnMsg === 'false' || returnMsg === false) ? false : true
+                console.log("askGPT", prompt, codeLensRange, replaceAll, returnMsg)
+                if (editor && prompt) {
+                    updateUIStateGPT("loading", editor)
+                    const clientSideConfigNode = RED.nodes.node(node.config)
+                    let config = null
+                    if (clientSideConfigNode && clientSideConfigNode.dirty) {
+                        config = {
+                            credentials: clientSideConfigNode.credentials,
+                            model: clientSideConfigNode.model,
+                        }
+                    }
+                    currentXhr = $.ajax({
+                        url: "/function-gpt-ask/" + node.id,
                         type: "POST",
                         data: {
-                            prompt: query
+                            prompt,
+                            config,
+                            returnMsg
                         },
                         // eslint-disable-next-line no-unused-vars
                         success: function (response) {
+                            editor.setReadOnly(false) // permit edits again
+                            if (!currentXhr) {
+                                // probably cancelled already, just return
+                                return
+                            }
                             RED.notify("Success.", { type: "success" });
                             let content = response.choices[0].message.content
-                            // strip content of extras
-                            content = content.replace('```javascript', '').replace('```csharp', '').replace('```', '').replace('```', '')
-                            editor.setValue(content)
+                            // remove any non code
+                            if (hasCodeFence(content)) {
+                                content = extractCodeBlocks(content, ['javascript', 'js', '']) // empty string is for no language specified in the code fence
+                            }
+                            const requires = extractRequires(content)
+                            if (requires) {
+                                content = '\n// IMPORTANT: require is not supported\n// Delete all calls to require and use the\n// function node "setup" tab to import modules\n\n' + content
+                            }
+                            // remove "return msg" if in the last line
+                            if (returnMsg === false) {
+                                content = removeReturnMsg(content)
+                            }
+                            
+                            const header = `//$PROMPT: ${prompt}\n`
+                            const selectionIsEmpty = (selection) => {
+                                return selection.isEmpty ? selection.isEmpty() : selection.start.row === selection.end.row && selection.start.col === selection.end.col
+                            }
+                            if (replaceAll) {
+                                // Select all text
+                                const fullRange = editor.getModel().getFullModelRange();
+                                // Apply the text over the range
+                                const suggestion = {
+                                    text: header + '\n' + content + '\n',
+                                    range: fullRange
+                                }
+                                editor.executeEdits('suggestion', [suggestion]);
+                                // // Indicates the above edit is a complete undo/redo change.
+                                // editor.pushUndoStop();
+                            } else if (codeLensRange) {
+                                // since this is a code lens action, the header(prompt) is already present in the editor
+                                // therefore we assume the user wants to replace the selection (user is working in the editor)
+                                const selection = editor.selection.getRange() // selection contains ACE position and MONACO range
+                                // see if the selection is empty
+                                if (selectionIsEmpty(selection)) {
+                                    const acePos = { row: codeLensRange.endLineNumber, col: 0 } // next line after the code lens
+                                    if (acePos.row < 0 || isNaN(acePos.row)) { acePos.row = 1 } // assume line 2
+                                    if (acePos.col < 0 || isNaN(acePos.col)) { acePos.col = 0 }
+                                    // dont need to add the header(prompt) since this was a code lens action and the header is already there
+                                    editor.session.insert(acePos, content + '\n') // replace uses executeEdits under the hood so undo/redo is supported
+                                    return
+                                } else {
+                                    if (selection.containsPosition(codeLensRange)) {
+                                        selection.collapseToEnd() // collapse to end of selection
+                                    }
+                                    // dont need to add the header(prompt) since this was a code lens action and the header is already there
+                                    editor.session.replace(selection, content + '\n') // replace uses executeEdits under the hood so undo/redo is supported
+                                }
+                            } else {
+                                // as there is no instruction to replace the selection and it isnt a code lens action,
+                                // we look at the current selection and if it is empty, we insert the header and content at the current cursor position
+                                // otherwise we replace the selection with the header and content
+                                const selection = editor.selection.getRange() // selection contains ACE position and MONACO range
+                                // see if the selection is empty
+                                if (selectionIsEmpty(selection)) {
+                                    // if so, insert the header and content at the current cursor position
+                                    const acePos = { row: selection.startLineNumber - 1, col: selection.startColumn - 1 }
+                                    if (acePos.row < 0 || isNaN(acePos.row)) { acePos.row = 0 }
+                                    if (acePos.col < 0 || isNaN(acePos.col)) { acePos.col = 0 }
+                                    editor.session.insert(acePos, header + '\n' + content + '\n') // insert uses executeEdits under the hood so undo/redo is supported
+                                } else {
+                                    // get the value of the current selection & check to see if it contains the header already
+                                    const selectionText = editor.getSelectedText() || ''
+                                    const indexOfHeader = selectionText.indexOf(header)
+                                    // if found, set the insert range to the start of the next line after the header
+                                    // to avoid overwriting the header line
+                                    if (indexOfHeader > -1) {
+                                        selection.start.row = selection.start.row + (indexOfHeader + 1)  // ACE position
+                                        selection.startLineNumber = selection.start.row + 1 // MONACO range
+                                        selection.startColumn = 1 // MONACO range
+                                        selection.start.col = 0 // ACE position
+                                        editor.session.replace(selection, content + '\n') // dont need to add the header(prompt) since it is already there
+                                    } else {
+                                        // otherwise, just replace the selection with the header and content
+                                        editor.session.replace(selection, header + '\n' + content + '\n')
+                                    }
+                                }
+                            }
                         },
                         // eslint-disable-next-line no-unused-vars
                         error: function (jqXHR, textStatus, errorThrown) {
+                            if (!currentXhr) {
+                                // probably cancelled already, just return
+                                return
+                            }
                             if (jqXHR.status == 404) {
-                                RED.notify("Please deploy the nodes first in order to use ChatGPT", "error");
+                                RED.notify("Please deploy the nodes before using ChatGPT", "error");
                             } else if (jqXHR.status == 500) {
-                                RED.notify("Please ensure you have configured ChatGPT for this function-gpt node, and re-deployed.", "error");
+                                if (jqXHR.responseJSON && jqXHR.responseJSON.message) {
+                                    RED.notify(jqXHR.responseJSON.message, {type: "error", timeout: 7500});
+                                } else {
+                                    RED.notify("Please ensure you have configured ChatGPT for this function-gpt node, and re-deployed.", "error");
+                                }
                             } else if (jqXHR.status == 0) {
-                                RED.notify(that._("common.notification.error", { message: that._("common.notification.errors.no-response") }), "error");
+                                RED.notify(node._("node-red:common.notification.error", { message: node._("node-red:common.notification.errors.no-response") }), "error");
                             } else {
-                                RED.notify(that._("common.notification.error", { message: that._("common.notification.errors.unexpected", { status: jqXHR.status, message: textStatus }) }), "error");
+                                RED.notify(node._("node-red:common.notification.error", { message: node._("node-red:common.notification.errors.unexpected", { status: jqXHR.status, message: textStatus }) }), "error");
                             }
                         },
                         complete: function () {
-                            $("#chatgpt-loading").hide()
-                            $("#chatgpt-ask").show()
+                            currentXhr = null
+                            updateUIStateGPT("complete", editor)
                         }
                     });
                 }
-            })
-
-            if (RED.settings.functionExternalModules !== false) {
-                prepareLibraryConfig(that);
             }
+            $("#chatgpt-input").on("focusout", () => {
+               storePrompt()
+            })
+            $("#chatgpt-cancel").on("click", () => {
+                if (currentXhr) {
+                    currentXhr.onreadystatechange = null
+                    currentXhr.abort()
+                    currentXhr = null
+                }
+                updateUIStateGPT("cancel")
+            })
+            $("#chatgpt-ask").on("click", () => {
+                if (currentXhr) {
+                    // should never happen, but just in case
+                    updateUIStateGPT("loading")
+                    return
+                }
+                const prompt = ($("#chatgpt-input").val() + "").trim()
+                const editor = getCurrentEditor()
+                askGPT(editor, prompt, null, true, true) // replaceAll = true, return the msg = true
+            })
+            
+            if (RED.settings.functionExternalModules !== false) {
+                prepareLibraryConfig(node);
+            }
+
+            /**
+             * Create the code lens provider and command for the javascript modal
+             */
+            function setupCodeLens() {
+                node.codeLensCommand = monaco.editor.registerCommand( 'execute-prompt', (...args) => {
+                        askGPT(getCurrentEditor(), args[1], args[2], args[3],  args[4]) // args[1] = prompt, args[2] = codeLensRange, args[3] = replaceAll, args[4] = return the msg
+                    }
+                )
+                node.codeLensProvider = monaco.languages.registerCodeLensProvider("javascript", {
+                    provideCodeLenses: function (model, token) {
+                        const lenses = []
+                        // get the text in the editor and check each line for //$PROMPT: _prompt_
+                        const lines = model.getLinesContent()
+                        for (let i = 0; i < lines.length; i++) {
+                            const line = lines[i]
+                            if (/\/\/\$PROMPT: .+/.test(line)) {
+                                const range = {
+                                    startLineNumber: i + 1,
+                                    startColumn: 1,
+                                    endLineNumber: i + 1,
+                                    endColumn: line.length + 1,
+                                }
+                                const prompt = line.replace(/\/\/\$PROMPT: /, '')
+                                const command = {
+                                    id: 'execute-prompt',
+                                    title: "Ask ChatGPT",
+                                    arguments: [prompt, range, false, false] // false = dont replace all, false = dont return the msg
+                                }
+                                lenses.push({
+                                    range,
+                                    command,
+                                })
+                            }
+                        }
+                        return {
+                            lenses,
+                            dispose: () => {},
+                        }
+                    },
+                    resolveCodeLens: function (model, codeLens, token) {
+                        return codeLens;
+                    },
+                });
+            }
+
+            // allow time for monaco editors to load and for panel to be visible
+            setTimeout(() => {
+                setupCodeLens()
+                restorePrompt()
+                updateUIStateGPT("ready")
+            }, 500)
         },
         oneditsave: function() {
             var node = this;
@@ -682,14 +889,28 @@
             disposeEditor("editor","node-input-func");
             disposeEditor("initEditor","node-input-initialize", "// Code added here will be run once\n// whenever the node is started.\n");
             disposeEditor("finalizeEditor","node-input-finalize", "// Code added here will be run when the\n// node is being stopped or re-deployed.\n");
-
+            if (node.codeLensCommand) {
+                node.codeLensCommand.dispose();
+                delete node.codeLensCommand;
+            }
+            if (node.codeLensProvider) {
+                node.codeLensProvider.dispose();
+                delete node.codeLensProvider;
+            }
             $("#node-input-noerr").val(noerr);
             this.noerr = noerr;
             node.libs = getLibsList();
         },
         oneditcancel: function() {
             var node = this;
-
+            if (node.codeLensCommand) {
+                node.codeLensCommand.dispose();
+                delete node.codeLensCommand;
+            }
+            if (node.codeLensProvider) {
+                node.codeLensProvider.dispose();
+                delete node.codeLensProvider;
+            }
             node.editor.destroy();
             delete node.editor;
 
@@ -728,12 +949,136 @@
             }
         }
     });
+
+    // #region gpt response parsing
+
+    /**
+     * Determines if a Markdown string contains one or more code fences.
+     * @param {string} markdown The Markdown string to check.
+     * @returns {boolean} True if the Markdown string contains one or more code fences, otherwise false.
+     * @example ```javascript
+     * const markdown = '```javascript\nconst a = 1 \n ```'
+     * hasCodeFence(markdown)
+     * // => true
+     * ```
+     * @example
+     * hasCodeFence('Hello world!')
+     * // => false
+    */
+    function hasCodeFence (markdown) {
+        const lines = markdown.split('\n')
+        return lines.filter(line => line.trim().startsWith('```')).length > 0
+    }
+
+    /**
+     * Determines if a require is contained in the code
+     * @param {string} code The code to check.
+     * @returns {string[]} a list of requires otherwise null
+     * @example ```javascript
+     * const code = '```javascript\nconst moment = require('moment') \n ```'
+     * extractRequires(code)
+     * // => ['moment']
+     * ```
+     * @example
+     * extractRequires('var x = 123!')
+     * // => false
+    */
+    function extractRequires (code) {
+        const requires = []
+        const lines = code.split('\n')
+        for (const line of lines) {
+            const match = line.match(/=.*?require\(['"](.+?)['"]\)/)
+            if (match) {
+                requires.push(match[1])
+            }
+        }
+        return requires.length > 0 ? requires : null
+    }
+
+    /**
+     * Extracts code blocks from a Markdown string.
+     *
+     * @param {string} markdown The Markdown string to extract code from.
+     * @param {string|string[]} [language] The language of the code blocks to extract. If this parameter is not specified, all code blocks will be extracted.
+     * @example ```javascript
+     * const markdown = '```javascript\nconst a = 1 \n ```'
+     * extractCodeBlocks(markdown)
+     * // => 'const a = 1'
+     * ```
+     * @example
+     * extractCodeBlocks('Hello world!')
+     * // => ''
+     * @returns {string} A string with the extracted code blocks, separated by two newlines.
+     */
+    function extractCodeBlocks (markdown, language = null) {
+        const codeBlocks = []
+        let currentBlock = null
+        let currentLanguage = null
+        const languages = Array.isArray(language) ? language.map(l => l.toLowerCase()) : (language ? [language.toLowerCase()] : [])
+        if (markdown === null) {
+            return ''
+        }
+
+        const lines = markdown.split('\n')
+        let state = 'outside'
+        for (const line of lines) {
+            if (line.trim().startsWith('```') && state === 'outside') {
+                currentBlock = ''
+                currentLanguage = line.trim().substring(3).toLowerCase()
+                state = 'inside'
+            } else if (line.trim().startsWith('```') && state === 'inside') {
+                if (currentBlock !== null && currentLanguage !== null) {
+                    if (languages.length === 0 || languages.includes(currentLanguage)) {
+                        codeBlocks.push(currentBlock)
+                    }
+                }
+                currentBlock = null
+                currentLanguage = null
+                state = 'outside'
+            } else if (state === 'inside') {
+                currentBlock += line + '\n'
+            }
+        }
+        return codeBlocks.join('\n\n')
+    }
+
+    /**
+     * remove return msg or return msg; if it is in the code on the last line of the code that has characters
+     * @param {string} code The code to check.
+     * @returns {string} the code without the return msg
+    */
+    function removeReturnMsg (code) {
+        const lines = code.split('\n')
+        
+        // loop backwards through the lines and remove any empty lines
+        // break when we hit a line with characters
+        for (let i = lines.length - 1; i >= 0; i--) {
+            if (lines[i].trim() === '') {
+                lines.splice(i, 1)
+            } else {
+                break
+            }
+        }
+        if (lines.length > 0) {
+            const lastLine = lines[lines.length - 1]
+            // now check the last line to see if it is a return msg
+            if (lastLine.trim().startsWith('return msg;')) {
+                lines[lines.length - 1] = lastLine.replace('return msg;', '')
+            } else if (lastLine.trim().startsWith('return msg')) {
+                lines[lines.length - 1] = lastLine.replace('return msg', '')
+            }
+        }
+        // return the code minus the return msg
+        return lines.join('\n')
+    }
+    // #endregion
+
 })();
 </script>
 
 <script type="text/html" data-help-name="function-gpt">
     <p>An extension of the standard Node-RED function node which includes additional prompt input for ChatGPT to generate code.</p>
-    <p>Note: You do need a valid OpenAI API key and account in order to use this node, configured via the <code>GPT Config</code> option</p>
+    <p>Note: You do need a valid OpenAI API key, Organisation ID and account in order to use this node. These are configured via the <code>GPT Config</code> option</p>
     <p>The ChatGPT prompt will populate the response from the API into the full contents of the active tab - "On Message", "On Start" or "On Stop".</p>
     <p>Please see the documentation for the standard Function node if you wish to understand the details of the Function node.</p>
 </script>
