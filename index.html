@@ -651,7 +651,6 @@
              */
             function askGPT (editor, prompt, codeLensRange, replaceAll, returnMsg) {
                 returnMsg = (returnMsg === 'false' || returnMsg === false) ? false : true
-                console.log("askGPT", prompt, codeLensRange, replaceAll, returnMsg)
                 if (editor && prompt) {
                     updateUIStateGPT("loading", editor)
                     const clientSideConfigNode = RED.nodes.node(node.config)
@@ -795,15 +794,29 @@
                 }
                 updateUIStateGPT("cancel")
             })
+
+            function askChatGPT () {
+                const prompt = ($("#chatgpt-input").val() + "").trim()
+                const editor = getCurrentEditor()
+                askGPT(editor, prompt, null, true, true) // replaceAll = true, return the msg = true
+            }
+
+            // allow enter on the text input
+            $("#chatgpt-input").on("keydown", (evt) => {
+                const key = evt.key
+                if (key === 'Enter') {
+                    askChatGPT()
+                }
+            })
+
+            // control the click functionality of the "Ask" button
             $("#chatgpt-ask").on("click", () => {
                 if (currentXhr) {
                     // should never happen, but just in case
                     updateUIStateGPT("loading")
                     return
                 }
-                const prompt = ($("#chatgpt-input").val() + "").trim()
-                const editor = getCurrentEditor()
-                askGPT(editor, prompt, null, true, true) // replaceAll = true, return the msg = true
+                askChatGPT()
             })
             
             if (RED.settings.functionExternalModules !== false) {

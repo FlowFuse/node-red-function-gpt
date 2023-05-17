@@ -33,7 +33,6 @@ module.exports = function (RED) {
          * @returns 
          */
         node.askGPT = function async(prompt, config, returnMsg = true) {
-            console.log('askGPT', prompt, config, returnMsg)
             let thisOpenAIApi = node.openAIApi
             const _model = (config ? config.model : null) || node.model
             if (config && config.credentials) {
