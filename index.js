@@ -90,10 +90,10 @@ module.exports = function(RED) {
         node.ini = n.initialize ? n.initialize.trim() : "";
         node.fin = n.finalize ? n.finalize.trim() : "";
         node.libs = n.libs || [];
-        node.openaiconfig = n.config
-        
-        this.openai = RED.nodes.getNode(node.openaiconfig);        
-        
+        node.openAiConfigId = n.config
+
+        this.openAiConfigIdNode = RED.nodes.getNode(node.openAiConfigId);
+
         if (RED.settings.functionExternalModules === false && node.libs.length > 0) {
             throw new Error(RED._("function.error.externalModuleNotAllowed"));
         }
@@ -495,22 +495,52 @@ module.exports = function(RED) {
     }
     
     RED.nodes.registerType("function-gpt", FunctionGPTNode, {
-        dynamicModuleList: "libs",
-        settings: {
-            functionExternalModules: { value: true, exportable: true }
-        }
+        dynamicModuleList: "libs"
     });
 
     RED.httpAdmin.post("/function-gpt-ask/:id", RED.auth.needsPermission("function-gpt.write"), async function (req, res) {
+        /** @type {FunctionGPTNode} */
         const node = RED.nodes.getNode(req.params.id);
         if (node != null) {
             try {
-                const response = await node.openai.askGPT(req.body.prompt)
+                // see if the provided config is different to the stored config
+                // if so, use the provided config
+                let config = undefined
+                const returnMsg = (req.body.returnMsg === false || req.body.returnMsg === 'false') ? false : true
+                if (req.body.config && (req.body.config.credentials || req.body.config.model)) {
+                    config = {}
+                    if (req.body.config.credentials) {
+                        config.credentials = {
+                            apiKey: req.body.config.credentials.apiKey,
+                            orgid: req.body.config.credentials.orgid,
+                        }
+                    }
+                    if (req.body.config.model) {
+                        config.model = req.body.config.model
+                    }
+                }
+                // askGPT = function async(prompt, config, returnMsg = true)
+                const response = await node.openAiConfigIdNode.askGPT(req.body.prompt, config, returnMsg)
+                // for testing without the API
+                // const response = {
+                //     data: {
+                //         choices: [
+                //             {
+                //                 message: {
+                //                     content:  `const lowercase = require('lowercase')\nconst m = "This is a fake response from the GPT node";\nmsg.payload = lowercase(m);\nreturn msg;`,
+                //                 }
+                //             },
+                //         ],
+                //     }
+                // }
                 res.status(200).send(response.data);
             } catch (err) {
-                res.sendStatus(500);
-                console.error(err)
-                node.error("GPT Failure", { error: err.toString() });
+                // console.error(err)
+                let errCode = (err.response && err.response.data && err.response.data.error && err.response.data.error.code) ? err.response.data.error.code : 'unknown_error'
+                let statusMessage = err.response ? err.response.statusText : err.toString()
+                let message = (err.response && err.response.data && err.response.data.error && err.response.data.error.message) ? err.response.data.error.message : ''
+                let msg = message || `GPT Failure: '${errCode}', ${statusMessage}`
+                res.status(500).json({ error: errCode, message: msg, status: statusMessage, code: errCode })
             }
         } else {
             res.sendStatus(404);
