@@ -523,17 +523,15 @@ module.exports = function(RED) {
                 const response = await node.openAiConfigIdNode.askGPT(req.body.prompt, config, returnMsg)
                 // for testing without the API
                 // const response = {
-                //     data: {
-                //         choices: [
-                //             {
-                //                 message: {
-                //                     content:  `const lowercase = require('lowercase')\nconst m = "This is a fake response from the GPT node";\nmsg.payload = lowercase(m);\nreturn msg;`,
-                //                 }
-                //             },
-                //         ],
-                //     }
+                //    choices: [
+                //        {
+                //            message: {
+                //                content:  `const lowercase = require('lowercase')\nconst m = "This is a fake response from the GPT node";\nmsg.payload = lowercase(m);\nreturn msg;`,
+                //            }
+                //        }
+                //    ]
                 // }
-                res.status(200).send(response.data);
+                res.status(200).send(response);
             } catch (err) {
                 // console.error(err)
                 let errCode = (err.response && err.response.data && err.response.data.error && err.response.data.error.code) ? err.response.data.error.code : 'unknown_error'

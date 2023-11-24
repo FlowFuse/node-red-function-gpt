@@ -23,6 +23,6 @@
   "dependencies": {
     "acorn": "^8.8.2",
     "acorn-walk": "^8.2.0",
-    "openai": "^3.2.1"
+    "openai": "^4.17.4"
   }
 }
