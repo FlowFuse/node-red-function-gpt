@@ -1,4 +1,4 @@
-const { Configuration, OpenAIApi } = require("openai");
+const OpenAIApi = require("openai");
 const Emitter = require('events').EventEmitter
 
 module.exports = function (RED) {
@@ -14,10 +14,10 @@ module.exports = function (RED) {
         node.emitter = emitter
 
         // setup the openAi API
-        const configuration = new Configuration({
+        const configuration = {
             organization: node.credentials.orgid,
             apiKey: node.credentials.apikey,
-        });
+        };
         node.openAIApi = new OpenAIApi(configuration);
         node.model = n.model
 
@@ -36,10 +36,10 @@ module.exports = function (RED) {
             let thisOpenAIApi = node.openAIApi
             const _model = (config ? config.model : null) || node.model
             if (config && config.credentials) {
-                const oaiConfig = new Configuration({
+                const oaiConfig = {
                     organization: config.credentials.orgid || node.credentials.orgid,
                     apiKey: config.credentials.apikey || node.credentials.apikey,
-                });
+                };
                 thisOpenAIApi = new OpenAIApi(oaiConfig);
             }
 
@@ -56,7 +56,7 @@ module.exports = function (RED) {
                 'prompt: ' + prompt + '\n' +
                 '#######################################################'
             node.log(dbgMessage)
-            return thisOpenAIApi.createChatCompletion({
+            return thisOpenAIApi.chat.completions.create({
                 model: _model,
                 messages: [
                     { role: "system", content: systemMessage },
