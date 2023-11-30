@@ -1,6 +1,6 @@
 {
-  "name": "@flowforge/node-red-function-gpt",
-  "version": "0.3.0",
+  "name": "@flowfuse/node-red-function-gpt",
+  "version": "0.4.0",
   "description": "Variation of the standard Node-RED function node that includes an interface to ChatGPT for writing into the function content.",
   "author": {
     "name": "Joe Pavitt",
@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/flowforge/node-red-function-gpt.git"
+    "url": "https://github.com/FlowFuse/node-red-function-gpt.git"
   },
   "license": "Apache-2.0",
   "keywords": [
