@@ -16,7 +16,7 @@ jobs:
           node-version: 16
       - run: npm install
       # - run: npm run test
-      - uses: JS-DevTools/npm-publish@19c28f1ef146469e409470805ea4279d47c3d35c # v3.1.1
+      - uses: JS-DevTools/npm-publish@8f08ec0dafe29acea4e9efe18e67ebde86904ad1 # v4.1.2
         with:
           token: ${{ secrets.NPM_PUBLISH_TOKEN }}
           access: public
