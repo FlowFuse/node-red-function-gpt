@@ -20,3 +20,13 @@ jobs:
         with:
           token: ${{ secrets.NPM_PUBLISH_TOKEN }}
           access: public
+      - name: getVersion
+        id: getVersion
+        shell: bash
+        run: |
+          VERSION=$(npm info . --json version | sed -e 's/"//g')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - uses: flowfuse/github-actions-workflows/actions/update-nr-flows@v0.49.0
+        with:
+          package: '@flowfuse/node-red-function-gpt'
+          version: ${{ steps.getVersion.outputs.version }}
