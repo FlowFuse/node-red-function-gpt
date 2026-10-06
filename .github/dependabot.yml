@@ -7,3 +7,6 @@ updates:
       interval: "weekly"
     cooldown:
       default-days: 1
+    commit-message:
+      prefix: "chore"
+      include: "scope"
